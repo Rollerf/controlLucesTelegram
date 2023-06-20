@@ -20,10 +20,10 @@ This project is a simple light control using a telegram bot for controll it remo
 ## Bot commands
 Go to @BotFather and put /setcommands in chat. Then select your bot an paste this list:
 
-encender_filas - Enciende todas las filas
-apagar_filas - Apagar todas las filas
-encender_fila_3 - Enciende fila 3
-estado_luces - Obtiene el estado de todas las luces
-encender_escaparate - Enciende escaparate
-apagar_escaparate - Apaga escaparate
-comandos - Obtiene todos los comandos
+encender_filas - Enciende todas las filas </br>
+apagar_filas - Apagar todas las filas </br>
+encender_fila_3 - Enciende fila 3 </br>
+estado_luces - Obtiene el estado de todas las luces </br>
+encender_escaparate - Enciende escaparate </br>
+apagar_escaparate - Apaga escaparate </br>
+comandos - Obtiene todos los comandos </br>
