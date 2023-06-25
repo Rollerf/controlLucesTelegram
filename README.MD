@@ -18,12 +18,4 @@ This project is a simple light control using a telegram bot for controll it remo
 | Row 6               | IO16          | 16                    |
 
 ## Bot commands
-Go to @BotFather and put /setcommands in chat. Then select your bot an paste this list:
-
-encender_filas - Enciende todas las filas </br>
-apagar_filas - Apagar todas las filas </br>
-encender_fila_3 - Enciende fila 3 </br>
-estado_luces - Obtiene el estado de todas las luces </br>
-encender_escaparate - Enciende escaparate </br>
-apagar_escaparate - Apaga escaparate </br>
-comandos - Obtiene todos los comandos </br>
+All commands are seting at start. You can check the autogenerate menu for get more information.

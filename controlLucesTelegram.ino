@@ -1,11 +1,12 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoOTA.h>
-#include "WIFIconfig.h"
-#include "telegramConfig.h"
 #include <UniversalTelegramBot.h>
 #include <Light.h>
 #include <Timer.h>
+#include "ntp.h"
+#include "WIFIconfig.h"
+#include "telegramConfig.h"
 
 #define ROW_1 26
 #define ROW_2 13
@@ -16,14 +17,14 @@
 
 WiFiClientSecure secured_client;
 UniversalTelegramBot bot(BOT_TOKEN, secured_client);
-bool Start = false;
+time_t getNtpTime();
 
 // Lights
 Light light_row_1(ROW_1);
 Light light_row_2(ROW_2);
 Light light_row_3(ROW_3);
 Light light_row_4(ROW_4);
-Light light_row_5(ROW_5);
+Light showCase(ROW_5);
 Light light_row_6(ROW_6);
 
 // Commands
@@ -31,12 +32,16 @@ const String GET_ALL_COMMANDS = "/comandos";
 const String GET_ESTADO_LUCES = "/estado_luces";
 const String SET_ALL_ON = "/encender_filas";
 const String SET_ALL_OFF = "/apagar_filas";
+const String SET_ON_ROW_MENU = "/menu_encender_fila";
 const String SET_ON_ROW_1 = "/encender_fila_1";
 const String SET_ON_ROW_2 = "/encender_fila_2";
 const String SET_ON_ROW_3 = "/encender_fila_3";
 const String SET_ON_ROW_4 = "/encender_fila_4";
 const String SET_ON_ROW_5 = "/encender_escaparate";
 const String SET_OFF_ROW_5 = "/apagar_escaparate";
+const String SET_AUTOMATIC_ROW_5 = "/escaparate_automatico";
+const String SHOWCASE_OPTIONS = "/opciones_escaparate";
+const String FECHA_ACTUAL = "/fecha_actual";
 
 // States
 const String ON = "ON";
@@ -52,8 +57,6 @@ const boolean RESET = false;
 
 void WIFIConnection()
 {
-  Serial.println("Connecting to WiFi..");
-
   WiFi.begin(SSID, PASSWORD);
 
   while (WiFi.waitForConnectResult() != WL_CONNECTED)
@@ -109,8 +112,15 @@ void checkWifiConnection()
   {
     if (WiFi.status() != WL_CONNECTED)
     {
-      ESP.restart();
-      tCheckConnection->IN(RESET);
+      WiFi.reconnect();
+      delay(10000);
+
+      if (WiFi.isConnected() == WL_CONNECTED)
+      {
+        WiFi.setAutoReconnect(true);
+        WiFi.persistent(true);
+        Serial.println("Connected to the WiFi network");
+      }
     }
 
     tCheckConnection->IN(RESET);
@@ -124,9 +134,15 @@ String getStatePrint(bool state)
 
 void writeResponse(String text, String chat_id)
 {
-  Serial.print(text);
+  Serial.println(text);
+
+  bot.sendMessage(chat_id, text, "Markdown");
+}
+
+void writeInlineMenu(String keyboardJson, String chat_id)
+{
   bot.sendChatAction(chat_id, "typing");
-  bot.sendMessage(chat_id, text);
+  bot.sendMessageWithInlineKeyboard(chat_id, "Elige una opción de las siguientes", "", keyboardJson);
 }
 
 void handleLightCommands(String text, String chat_id)
@@ -140,7 +156,7 @@ void handleLightCommands(String text, String chat_id)
     response += "Fila 2: " + String(getStatePrint(light_row_2.getState())) + "\n\n";
     response += "Fila 3: " + String(getStatePrint(light_row_3.getState())) + "\n\n";
     response += "Fila 4: " + String(getStatePrint(light_row_4.getState())) + "\n\n";
-    response += "Escaparate: " + String(getStatePrint(light_row_5.getState())) + "\n\n";
+    response += "Escaparate: " + String(getStatePrint(showCase.getState())) + "\n\n";
 
     writeResponse(response, chat_id);
   }
@@ -193,14 +209,44 @@ void handleLightCommands(String text, String chat_id)
 
   if (text == SET_ON_ROW_5)
   {
-    light_row_5.turnOn();
+    showCase.turnOffAutomatic();
+    showCase.turnOn();
     writeResponse("Escaparate encendido", chat_id);
   }
 
-  if(text == SET_OFF_ROW_5)
+  if (text == SET_OFF_ROW_5)
   {
-    light_row_5.turnOff();
+    showCase.turnOffAutomatic();
+    showCase.turnOff();
     writeResponse("Escaparate apagado", chat_id);
+  }
+
+  if (text == SET_AUTOMATIC_ROW_5)
+  {
+    showCase.turnOnAutomatic();
+    writeResponse("Escaparate automatico", chat_id);
+  }
+
+  if (text == SHOWCASE_OPTIONS)
+  {
+    String keyboardJson =
+        "[[{ \"text\" : \"Encender\", \"callback_data\" : \"/encender_escaparate\" }],[{ \"text\" : \"Apagar\", \"callback_data\" : \"/apagar_escaparate\" }],[{ \"text\" : \"Automatico\", \"callback_data\" : \"/escaparate_automatico\" }]]";
+    writeInlineMenu(keyboardJson, chat_id);
+  }
+
+  if (text == SET_ON_ROW_MENU)
+  {
+    String keyboardJson =
+        "[[{ \"text\" : \"Fila 1\", \"callback_data\" : \"/encender_fila_1\" }],[{ \"text\" : \"Fila 2\", \"callback_data\" : \"/encender_fila_2\" }],[{ \"text\" : \"Fila 3\", \"callback_data\" : \"/encender_fila_3\" }],[{ \"text\" : \"Fila 4\", \"callback_data\" : \"/encender_fila_4\" }]]";
+    writeInlineMenu(keyboardJson, chat_id);
+  }
+
+  if (text == FECHA_ACTUAL)
+  {
+    writeResponse(getDateAndHour(), chat_id);
+    writeResponse("Es de noche: " + String(isNight()), chat_id);
+    writeResponse("Time zone: " + String(getTimeZone()), chat_id);
+    writeResponse("Escaparate: " + String(showCase.getState()), chat_id);
   }
 }
 
@@ -213,7 +259,7 @@ void handleNewMessages(int numNewMessages)
   {
     if (bot.messages[i].chat_id != JOSE_CHAT_ID && bot.messages[i].chat_id != MIGUEL_CHAT_ID && bot.messages[i].chat_id != CHEMA_CHAT_ID)
     {
-      bot.sendMessage(bot.messages[i].chat_id, "No tienes permisos para usar este bot");
+      writeResponse("No tienes permisos para usar este bot", bot.messages[i].chat_id);
       continue;
     }
 
@@ -226,11 +272,9 @@ void handleNewMessages(int numNewMessages)
       welcome += GET_ESTADO_LUCES + " - Lista el estado de las luces\n\n";
       welcome += SET_ALL_ON + " - Encender todas\n\n";
       welcome += SET_ALL_OFF + " - Apagar todas\n\n";
-      welcome += SET_ON_ROW_1 + " - Encender fila 1\n\n";
-      welcome += SET_ON_ROW_2 + " - Encender fila 1\n\n";
-      welcome += SET_ON_ROW_3 + " - Encender fila 3\n\n";
-      welcome += SET_ON_ROW_4 + " - Encender fila 4\n\n";
-      welcome += SET_ON_ROW_5 + " - Encender escaparate\n\n";
+      welcome += SET_ON_ROW_MENU + " - Menu encender fila\n\n";
+      welcome += SHOWCASE_OPTIONS + " - Opciones escaparate\n\n";
+      welcome += FECHA_ACTUAL + " - Muestra la fecha actual\n\n";
 
       bot.sendMessage(chat_id, welcome);
     }
@@ -241,7 +285,7 @@ void handleNewMessages(int numNewMessages)
 
 void setup()
 {
-  Serial.begin(115200);
+  // Serial.begin(115200);
 
   Serial.println("Booting");
 
@@ -255,11 +299,25 @@ void setup()
   light_row_2.begin();
   light_row_3.begin();
   light_row_4.begin();
-  light_row_5.begin();
+  showCase.begin();
   light_row_6.begin();
 
   tCheckConnection = new TON(30000);
   tCheckMessages = new TON(1000);
+
+  setupNtp();
+
+  const String commands = F("["
+                            "{\"command\":\"encender_filas\",  \"description\":\"Enciende todas las filas\"},"
+                            "{\"command\":\"apagar_filas\", \"description\":\"Apaga todas las filas\"},"
+                            "{\"command\":\"menu_encender_fila\",\"description\":\"Menu encender fila\"},"
+                            "{\"command\":\"estado_luces\", \"description\":\"Obtiene el estado de todas las luces\"},"
+                            "{\"command\":\"opciones_escaparate\", \"description\":\"Opciones escaparate\"},"
+                            "{\"command\":\"comandos\", \"description\":\"Obtiene todos los comandos\"}" // no comma on last command
+                            "]");
+  bot.setMyCommands(commands);
+
+  showCase.turnOnAutomatic();
 }
 
 void loop()
@@ -267,6 +325,8 @@ void loop()
   ArduinoOTA.handle();
   yield();
   checkWifiConnection();
+
+  showCase.manageLightStateWithExternalCondition(isNight());
 
   if (tCheckMessages->IN(START))
   {
