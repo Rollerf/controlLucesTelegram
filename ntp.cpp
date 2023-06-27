@@ -8,13 +8,18 @@ TimeLord timeLord;
 
 const int NTP_PACKET_SIZE = 48;     // NTP time is in the first 48 bytes of message
 byte packetBuffer[NTP_PACKET_SIZE]; // buffer to hold incoming & outgoing packets
-static const char ntpServerName[] = "es.pool.ntp.org";
+static const char ntpServerName[] = "europe.pool.ntp.org";
 const unsigned int localPort = 8888; // local port to listen for UDP packets
 const float LONGITUDE = -8.650020;
 const float LATITUDE = 42.859009;
 const byte CET = 1;
 const byte CEST = 2;
+
 static byte timeZone = CET;
+static int sunRiseCustom;
+static int sunSetOffset;
+static int sunRiseMinutes = 0;
+static int sunSetMinutes = 0;
 
 time_t getNtpTime();
 void sendNTPpacket(IPAddress &address);
@@ -43,22 +48,12 @@ int getLastSunday(int year, int month)
 bool isEuropeanSummerTime(int year, int month, int day)
 {
     Serial.println("IsEuropeanSummerTime debug: ");
-    // Serial.print("Month: ");
-    // Serial.println(month);
 
     if (month < 3 || month > 10)
     {
         // We are outside the range of possible European DST months
         return false;
     }
-
-    // if (month > 3 && month < 10)
-    // {
-    //     // We are within the standard time range (not DST)
-    //     return false;
-    // }
-
-    // We are within the potential DST range, so check the specific dates
 
     // Calculate the last Sunday in March
     int lastSundayInMarch = getLastSunday(year, 3);
@@ -170,9 +165,6 @@ bool isNight()
     timeLord.TimeZone(timeZone * 60);
     byte today[] = {second(), minute(), hour(), day(), month(), year()};
 
-    int sunRiseMinutes = 0;
-    int sunSetMinutes = 0;
-
     if (timeLord.SunRise(today)) // if the sun will rise today (it might not, in the [ant]arctic)
     {
         Serial.print("Sunrise: ");
@@ -180,7 +172,7 @@ bool isNight()
         Serial.print(":");
         Serial.println((int)today[tl_minute]);
 
-        sunRiseMinutes = (int)today[tl_hour] * 60 + (int)today[tl_minute];
+        sunRiseMinutes = sunRiseCustom > 0 ? sunRiseCustom : (int)today[tl_hour] * 60 + (int)today[tl_minute];
     }
 
     if (timeLord.SunSet(today))
@@ -190,13 +182,26 @@ bool isNight()
         Serial.print(":");
         Serial.println((int)today[tl_minute]);
 
-        sunSetMinutes = (int)today[tl_hour] * 60 + (int)today[tl_minute];
+        sunSetMinutes = (int)today[tl_hour] * 60 + (int)today[tl_minute] - sunSetOffset;
     }
 
     int currentMinutes = hour() * 60 + minute();
 
     return currentMinutes > sunSetMinutes ||
            currentMinutes < sunRiseMinutes;
+}
+
+void setSunSetOffset(int offset)
+{
+    sunSetOffset = offset;
+}
+
+void setSunRiseHour(int minutes){
+    sunRiseCustom = minutes;
+}
+
+String getSunRiseAndSunSetCalculated(){
+    return "Sunrise: " + String(sunRiseMinutes) + " Sunset: " + String(sunSetMinutes);
 }
 
 String getDateAndHour()

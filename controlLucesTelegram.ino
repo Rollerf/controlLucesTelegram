@@ -41,6 +41,10 @@ const String SET_ON_ROW_5 = "/encender_escaparate";
 const String SET_OFF_ROW_5 = "/apagar_escaparate";
 const String SET_AUTOMATIC_ROW_5 = "/escaparate_automatico";
 const String SHOWCASE_OPTIONS = "/opciones_escaparate";
+const String SHOWCASE_OFFSET_ON = "/offset_encender_escaparate";
+const String SHOWCASE_OFFSET_OFF = "/offset_apagar_escaparate";
+const String SHOWCASE_OFFSET_ON_NUMBER = "/offset_showcase_on";
+const String SHOWCASE_OFF_HOUR = "/offset_showcase_off";
 const String FECHA_ACTUAL = "/fecha_actual";
 
 // States
@@ -230,8 +234,34 @@ void handleLightCommands(String text, String chat_id)
   if (text == SHOWCASE_OPTIONS)
   {
     String keyboardJson =
-        "[[{ \"text\" : \"Encender\", \"callback_data\" : \"/encender_escaparate\" }],[{ \"text\" : \"Apagar\", \"callback_data\" : \"/apagar_escaparate\" }],[{ \"text\" : \"Automatico\", \"callback_data\" : \"/escaparate_automatico\" }]]";
+        "[[{ \"text\" : \"Encender\", \"callback_data\" : \"/encender_escaparate\" }, { \"text\" : \"Apagar\", \"callback_data\" : \"/apagar_escaparate\" }],[{ \"text\" : \"Automatico\", \"callback_data\" : \"/escaparate_automatico\" }]]";
     writeInlineMenu(keyboardJson, chat_id);
+  }
+
+  if (text == SHOWCASE_OFFSET_ON)
+  {
+    String keyboardJson =
+        "[[{ \"text\" : \"1\", \"callback_data\" : \"/offset_showcase_on_1\" }, { \"text\" : \"2\", \"callback_data\" : \"/offset_showcase_on_2\" }],[{ \"text\" : \"3\", \"callback_data\" : \"/offset_showcase_on_3\" }, { \"text\" : \"4\", \"callback_data\" : \"/offset_showcase_on_4\" }]]";
+    writeInlineMenu(keyboardJson, chat_id);
+  }
+
+  if (text == SHOWCASE_OFFSET_OFF)
+  {
+    String keyboardJson =
+        "[[{ \"text\" : \"1\", \"callback_data\" : \"/offset_showcase_off_1\" }, { \"text\" : \"2\", \"callback_data\" : \"/offset_showcase_off_2\" }],[{ \"text\" : \"3\", \"callback_data\" : \"/offset_showcase_off_3\" }, { \"text\" : \"4\", \"callback_data\" : \"/offset_showcase_off_4\" }]]";
+    writeInlineMenu(keyboardJson, chat_id);
+  }
+
+  if (text.startsWith(SHOWCASE_OFFSET_ON_NUMBER))
+  {
+    setSunSetOffset(text.substring(text.length() - 1).toInt() * 60);
+    writeResponse("Valor introducido correctamente", chat_id);
+  }
+
+  if (text.startsWith(SHOWCASE_OFF_HOUR))
+  {
+    setSunRiseHour(text.substring(text.length() - 1).toInt() * 60);
+    writeResponse("Valor introducido correctamente", chat_id);
   }
 
   if (text == SET_ON_ROW_MENU)
@@ -247,6 +277,7 @@ void handleLightCommands(String text, String chat_id)
     writeResponse("Es de noche: " + String(isNight()), chat_id);
     writeResponse("Time zone: " + String(getTimeZone()), chat_id);
     writeResponse("Escaparate: " + String(showCase.getState()), chat_id);
+    writeResponse(getSunRiseAndSunSetCalculated(), chat_id);
   }
 }
 
@@ -274,6 +305,8 @@ void handleNewMessages(int numNewMessages)
       welcome += SET_ALL_OFF + " - Apagar todas\n\n";
       welcome += SET_ON_ROW_MENU + " - Menu encender fila\n\n";
       welcome += SHOWCASE_OPTIONS + " - Opciones escaparate\n\n";
+      welcome += SHOWCASE_OFFSET_ON + "- Offset encendido\n\n";
+      welcome += SHOWCASE_OFFSET_OFF + "- Hora apagado\n\n";
       welcome += FECHA_ACTUAL + " - Muestra la fecha actual\n\n";
 
       bot.sendMessage(chat_id, welcome);
