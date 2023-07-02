@@ -36,6 +36,7 @@ const String SET_ON_ROW_MENU = "/menu_encender_fila";
 const String SET_ON_ROW_1 = "/encender_fila_1";
 const String SET_ON_ROW_2 = "/encender_fila_2";
 const String SET_ON_ROW_3 = "/encender_fila_3";
+const String SET_OFF_ROW_3 = "/apagar_fila_3";
 const String SET_ON_ROW_4 = "/encender_fila_4";
 const String SET_ON_ROW_5 = "/encender_escaparate";
 const String SET_OFF_ROW_5 = "/apagar_escaparate";
@@ -179,7 +180,7 @@ void handleLightCommands(String text, String chat_id)
   {
     light_row_1.turnOff();
     light_row_2.turnOff();
-    light_row_3.turnOff();
+    // light_row_3.turnOff();
     light_row_4.turnOff();
     light_row_6.turnOff();
 
@@ -203,6 +204,12 @@ void handleLightCommands(String text, String chat_id)
   {
     light_row_3.turnOn();
     writeResponse("Fila 3 encendida", chat_id);
+  }
+
+  if (text == SET_OFF_ROW_3)
+  {
+    light_row_3.turnOff();
+    writeResponse("Fila 3 apagada", chat_id);
   }
 
   if (text == SET_ON_ROW_4)
@@ -304,9 +311,10 @@ void handleNewMessages(int numNewMessages)
       welcome += SET_ALL_ON + " - Encender todas\n\n";
       welcome += SET_ALL_OFF + " - Apagar todas\n\n";
       welcome += SET_ON_ROW_MENU + " - Menu encender fila\n\n";
+      welcome += SET_OFF_ROW_3 + " - Apagar fila 3\n\n";
       welcome += SHOWCASE_OPTIONS + " - Opciones escaparate\n\n";
-      welcome += SHOWCASE_OFFSET_ON + "- Offset encendido\n\n";
-      welcome += SHOWCASE_OFFSET_OFF + "- Hora apagado\n\n";
+      welcome += SHOWCASE_OFFSET_ON + " - Offset encendido\n\n";
+      welcome += SHOWCASE_OFFSET_OFF + " - Hora apagado\n\n";
       welcome += FECHA_ACTUAL + " - Muestra la fecha actual\n\n";
 
       bot.sendMessage(chat_id, welcome);
@@ -343,9 +351,11 @@ void setup()
   const String commands = F("["
                             "{\"command\":\"encender_filas\",  \"description\":\"Enciende todas las filas\"},"
                             "{\"command\":\"apagar_filas\", \"description\":\"Apaga todas las filas\"},"
-                            "{\"command\":\"menu_encender_fila\",\"description\":\"Menu encender fila\"},"
                             "{\"command\":\"estado_luces\", \"description\":\"Obtiene el estado de todas las luces\"},"
+                            "{\"command\":\"encender_fila_3\", \"description\":\"Enciende la fila 3\"},"
+                            "{\"command\":\"apagar_fila_3\", \"description\":\"Apaga la fila 3\"},"
                             "{\"command\":\"opciones_escaparate\", \"description\":\"Opciones escaparate\"},"
+                            "{\"command\":\"menu_encender_fila\",\"description\":\"Menu encender fila\"},"
                             "{\"command\":\"comandos\", \"description\":\"Obtiene todos los comandos\"}" // no comma on last command
                             "]");
   bot.setMyCommands(commands);
