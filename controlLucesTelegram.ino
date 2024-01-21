@@ -180,7 +180,7 @@ void handleLightCommands(String text, String chat_id)
   {
     light_row_1.turnOff();
     light_row_2.turnOff();
-    // light_row_3.turnOff();
+    light_row_3.turnOff();
     light_row_4.turnOff();
     light_row_6.turnOff();
 
